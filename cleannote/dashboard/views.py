@@ -19,7 +19,7 @@ def dashboard(request):
             return redirect('accounts:subscription')
     except UserProfile.DoesNotExist:
         return redirect('accounts:subscription')
-    
+        
     # Get AI models
     ai_models = AIModel.objects.all()
     default_model = AIModel.objects.filter(is_default=True).first()

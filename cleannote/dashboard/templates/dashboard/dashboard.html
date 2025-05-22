@@ -1,0 +1,466 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - CleanNote{% endblock %}
+
+{% block extra_head %}
+<style>
+    .sidebar {
+        transition: transform 0.3s ease;
+    }
+    
+    .sidebar-open {
+        transform: translateX(0);
+    }
+    
+    .sidebar-closed {
+        transform: translateX(100%);
+    }
+    
+    @media (min-width: 768px) {
+        .sidebar-closed {
+            transform: translateX(0);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div class="flex flex-col md:flex-row">
+        <!-- Main Content -->
+        <div class="flex-1">
+            <div class="bg-white shadow rounded-lg p-6">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">Generate AI Notes from YouTube</h2>
+                
+                <div class="space-y-6">
+                    <!-- YouTube URL Input -->
+                    <div>
+                        <label for="youtube-url" class="block text-sm font-medium text-gray-700">YouTube Video URL</label>
+                        <div class="mt-1 flex rounded-md shadow-sm">
+                            <input type="text" name="youtube-url" id="youtube-url" class="flex-1 min-w-0 block w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="https://www.youtube.com/watch?v=...">
+                            <button type="button" id="generate-btn" class="ml-3 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                Generate CleanNote
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Token Information -->
+                    <div class="bg-gray-50 p-4 rounded-md">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-sm font-medium text-gray-900">Tokens Remaining</h3>
+                                <p class="text-2xl font-bold text-indigo-600" id="tokens-remaining">{{ tokens_remaining }}</p>
+                            </div>
+                            <a href="{% url 'accounts:subscription' %}" class="text-sm text-indigo-600 hover:text-indigo-500">
+                                Upgrade Plan
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <!-- YouTube Player and Note Section -->
+                    <div class="hidden" id="result-section">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- YouTube Player -->
+                            <div>
+                                <div class="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden bg-gray-100">
+                                    <div id="youtube-player"></div>
+                                </div>
+                                <div class="mt-2 text-sm text-gray-500" id="video-timestamp"></div>
+                            </div>
+                            
+                            <!-- Note Content -->
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <div class="flex justify-between items-start mb-4">
+                                    <h3 class="text-lg font-medium text-gray-900">AI Generated Notes</h3>
+                                    <div class="flex space-x-2">
+                                        <button type="button" id="save-note-btn" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                            Save
+                                        </button>
+                                        <button type="button" id="download-note-btn" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-gray-700 bg-gray-100 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                                            Download
+                                        </button>
+                                        <button type="button" id="fullscreen-note-btn" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-gray-700 bg-gray-100 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                                            Fullscreen
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="prose prose-sm max-w-none" id="note-content">
+                                    <p class="text-gray-500 italic">Generated notes will appear here...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Loading Indicator -->
+                    <div class="hidden" id="loading-section">
+                        <div class="flex justify-center items-center py-12">
+                            <svg class="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span class="ml-3 text-sm font-medium text-gray-700">Generating notes...</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Error Message -->
+                    <div class="hidden bg-red-50 p-4 rounded-md" id="error-section">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-red-800">Error</h3>
+                                <div class="mt-2 text-sm text-red-700" id="error-message"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Recent Notes -->
+            <div class="mt-8 bg-white shadow rounded-lg p-6">
+                <h2 class="text-xl font-bold text-gray-900 mb-4">Recent Notes</h2>
+                
+                {% if recent_notes %}
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">AI Model</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tokens Used</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for note in recent_notes %}
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ note.title }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ note.ai_model.name }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ note.tokens_used }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ note.created_at|date:"M d, Y" }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <a href="{% url 'dashboard:note_detail' note.id %}" class="text-indigo-600 hover:text-indigo-900">View</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-gray-500">No notes yet. Generate your first note above!</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Sidebar Toggle Button (Mobile) -->
+        <div class="fixed bottom-4 right-4 md:hidden z-20">
+            <button type="button" id="sidebar-toggle" class="inline-flex items-center p-3 border border-transparent rounded-full shadow-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+            </button>
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="sidebar fixed top-0 right-0 w-64 h-full bg-white shadow-lg z-10 p-4 md:static md:w-80 md:ml-6 md:mt-0 sidebar-closed md:sidebar-open">
+            <div class="flex justify-between items-center mb-6 md:hidden">
+                <h3 class="text-lg font-medium text-gray-900">Settings</h3>
+                <button type="button" id="sidebar-close" class="text-gray-400 hover:text-gray-500">
+                    <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="space-y-6">
+                <!-- AI Model Selection -->
+                <div>
+                    <label for="ai-model" class="block text-sm font-medium text-gray-700">AI Model</label>
+                    <select id="ai-model" name="ai-model" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                        {% for model in ai_models %}
+                        <option value="{{ model.id }}" {% if model.is_default %}selected{% endif %}>{{ model.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- API Key Override -->
+                <div>
+                    <label for="api-key" class="block text-sm font-medium text-gray-700">Custom API Key (Optional)</label>
+                    <div class="mt-1">
+                        <input type="password" name="api-key" id="api-key" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" placeholder="Your API key">
+                    </div>
+                    <p class="mt-2 text-sm text-gray-500">
+                        Provide your own API key to use with the selected model.
+                    </p>
+                    <button type="button" id="save-api-key" class="mt-2 inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Save API Key
+                    </button>
+                </div>
+                
+                <!-- Additional Options -->
+                <div class="border-t border-gray-200 pt-4">
+                    <h3 class="text-lg font-medium text-gray-900 mb-3">Additional Options</h3>
+                    
+                    <div class="space-y-4">
+                        <div class="flex items-start">
+                            <div class="flex items-center h-5">
+                                <input id="create-quiz" name="create-quiz" type="checkbox" class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded">
+                            </div>
+                            <div class="ml-3 text-sm">
+                                <label for="create-quiz" class="font-medium text-gray-700">Create Quiz</label>
+                                <p class="text-gray-500">Generate quiz questions based on the video content</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start">
+                            <div class="flex items-center h-5">
+                                <input id="include-timestamps" name="include-timestamps" type="checkbox" class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded" checked>
+                            </div>
+                            <div class="ml-3 text-sm">
+                                <label for="include-timestamps" class="font-medium text-gray-700">Include Timestamps</label>
+                                <p class="text-gray-500">Add video timestamps to the generated notes</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Fullscreen Note Modal -->
+<div class="fixed inset-0 overflow-y-auto hidden" id="fullscreen-modal">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 transition-opacity" aria-hidden="true">
+            <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
+        </div>
+        
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
+            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="sm:flex sm:items-start">
+                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                            Note Details
+                        </h3>
+                        <div class="mt-4 prose prose-sm max-w-none" id="modal-content">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button type="button" id="close-modal" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+    // YouTube player
+    let player;
+    let currentVideoId = '';
+    
+    function onYouTubeIframeAPIReady() {
+        // Player will be initialized when a video is loaded
+    }
+    
+    function loadYouTubeVideo(videoId) {
+        if (player && currentVideoId === videoId) {
+            // Video already loaded
+            return;
+        }
+        
+        currentVideoId = videoId;
+        
+        if (player) {
+            player.loadVideoById(videoId);
+        } else {
+            player = new YT.Player('youtube-player', {
+                height: '100%',
+                width: '100%',
+                videoId: videoId,
+                playerVars: {
+                    'playsinline': 1
+                }
+            });
+        }
+    }
+    
+    // Extract YouTube video ID from URL
+    function extractVideoId(url) {
+        const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[7].length === 11) ? match[7] : false;
+    }
+    
+    // DOM elements
+    const youtubeUrlInput = document.getElementById('youtube-url');
+    const generateBtn = document.getElementById('generate-btn');
+    const resultSection = document.getElementById('result-section');
+    const loadingSection = document.getElementById('loading-section');
+    const errorSection = document.getElementById('error-section');
+    const errorMessage = document.getElementById('error-message');
+    const noteContent = document.getElementById('note-content');
+    const tokensRemaining = document.getElementById('tokens-remaining');
+    const saveNoteBtn = document.getElementById('save-note-btn');
+    const downloadNoteBtn = document.getElementById('download-note-btn');
+    const fullscreenNoteBtn = document.getElementById('fullscreen-note-btn');
+    const fullscreenModal = document.getElementById('fullscreen-modal');
+    const modalContent = document.getElementById('modal-content');
+    const closeModal = document.getElementById('close-modal');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const sidebarClose = document.getElementById('sidebar-close');
+    const sidebar = document.querySelector('.sidebar');
+    const aiModelSelect = document.getElementById('ai-model');
+    const apiKeyInput = document.getElementById('api-key');
+    const saveApiKeyBtn = document.getElementById('save-api-key');
+    
+    // Sidebar toggle (mobile)
+    sidebarToggle.addEventListener('click', () => {
+        sidebar.classList.remove('sidebar-closed');
+        sidebar.classList.add('sidebar-open');
+    });
+    
+    sidebarClose.addEventListener('click', () => {
+        sidebar.classList.remove('sidebar-open');
+        sidebar.classList.add('sidebar-closed');
+    });
+    
+    // Generate note
+    generateBtn.addEventListener('click', async () => {
+        const youtubeUrl = youtubeUrlInput.value.trim();
+        if (!youtubeUrl) {
+            showError('Please enter a YouTube URL');
+            return;
+        }
+        
+        const videoId = extractVideoId(youtubeUrl);
+        if (!videoId) {
+            showError('Invalid YouTube URL');
+            return;
+        }
+        
+        // Show loading
+        resultSection.classList.add('hidden');
+        errorSection.classList.add('hidden');
+        loadingSection.classList.remove('hidden');
+        
+        // Get form data
+        const formData = new FormData();
+        formData.append('youtube_url', youtubeUrl);
+        formData.append('ai_model', aiModelSelect.value);
+        formData.append('api_key', apiKeyInput.value);
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+        
+        try {
+            const response = await fetch('{% url "dashboard:generate_note" %}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to generate note');
+            }
+            
+            // Update tokens remaining
+            tokensRemaining.textContent = data.tokens_remaining;
+            
+            // Show result
+            noteContent.innerHTML = data.note_content;
+            loadYouTubeVideo(data.video_id);
+            
+            loadingSection.classList.add('hidden');
+            resultSection.classList.remove('hidden');
+            
+            // Save note ID for save button
+            saveNoteBtn.dataset.noteId = data.note_id;
+            
+        } catch (error) {
+            loadingSection.classList.add('hidden');
+            showError(error.message);
+        }
+    });
+    
+    // Show error message
+    function showError(message) {
+        errorMessage.textContent = message;
+        errorSection.classList.remove('hidden');
+    }
+    
+    // Fullscreen note
+    fullscreenNoteBtn.addEventListener('click', () => {
+        modalContent.innerHTML = noteContent.innerHTML;
+        fullscreenModal.classList.remove('hidden');
+    });
+    
+    // Close modal
+    closeModal.addEventListener('click', () => {
+        fullscreenModal.classList.add('hidden');
+    });
+    
+    // Download note
+    downloadNoteBtn.addEventListener('click', () => {
+        const content = noteContent.innerText;
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'cleannote.txt';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    });
+    
+    // Save API key
+    saveApiKeyBtn.addEventListener('click', async () => {
+        const apiKey = apiKeyInput.value.trim();
+        const modelId = aiModelSelect.value;
+        
+        if (!apiKey) {
+            showError('Please enter an API key');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('ai_model', modelId);
+        formData.append('api_key', apiKey);
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+        
+        try {
+            const response = await fetch('{% url "dashboard:save_api_key" %}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to save API key');
+            }
+            
+            alert('API key saved successfully');
+            
+        } catch (error) {
+            showError(error.message);
+        }
+    });
+</script>
+{% endblock %}

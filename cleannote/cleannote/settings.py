@@ -34,7 +34,7 @@ INSTALLED_APPS = [
      'social_django',
     # Local apps
     'accounts',
-    # 'dashboard',
+    'dashboard',
 ]
 
 MIDDLEWARE = [
@@ -141,3 +141,5 @@ SONAR_API_KEY = 'your-sonar-api-key'
 # SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = ''
 
 
+RAZORPAY_KEY_ID = 'rzp_test_ARr8VUjKdScHPh'
+RAZORPAY_KEY_SECRET = 'ggCJJvsFWju2GbYOED5Rayrj'

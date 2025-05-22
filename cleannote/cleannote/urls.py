@@ -5,7 +5,7 @@ from django.views.generic import RedirectView
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('accounts.urls')),
-    # path('dashboard/', include('dashboard.urls')),
+     path('dashboard/', include('dashboard.urls')),
     # path('', RedirectView.as_view(url='/accounts/login/'), name='home'),
     path('accounts/', include('allauth.urls'))
 
