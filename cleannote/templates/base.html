@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CleanNote{% endblock %}</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Custom styles -->
+    <style>
+        /* Custom styles can go here */
+    </style>
+    
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <header class="bg-white shadow">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex">
+                    <div class="flex-shrink-0 flex items-center">
+                    </div>
+                </div>
+                
+                {% if user.is_authenticated %}
+                <div class="flex items-center">
+                    <div class="ml-3 relative">
+                        <div class="flex items-center space-x-4">
+                            <span class="text-sm text-gray-700">
+                                {% if user.profile.subscription %}
+                                    {{ user.profile.subscription.name }} Plan: 
+                                    <span class="font-medium">{{ user.profile.tokens_remaining }} tokens</span>
+                                {% endif %}
+                            </span>
+                            <div class="relative">
+                                <button type="button" class="flex text-sm rounded-full focus:outline-none" id="user-menu-button">
+                                    <span class="sr-only">Open user menu</span>
+                                    <div class="h-8 w-8 rounded-full bg-indigo-600 flex items-center justify-center text-white">
+                                        {{ user.username|first|upper }}
+                                    </div>
+                                </button>
+                                <!-- Dropdown menu -->
+                                <div class="hidden origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none" id="user-menu">
+                                    <a href="{% url 'accounts:subscription' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Change Subscription</a>
+                                    <a href="{% url 'account_logout' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Sign out</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+    
+    <main>
+        {% if messages %}
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+            {% for message in messages %}
+            <div class="rounded-md p-4 mb-4 {% if message.tags == 'error' %}bg-red-50 text-red-700{% else %}bg-green-50 text-green-700{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        {% block content %}{% endblock %}
+    </main>
+    
+    <footer class="bg-white mt-12 py-6">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <p class="text-center text-gray-500 text-sm">
+                &copy; {% now "Y" %} CleanNote. All rights reserved.
+            </p>
+        </div>
+    </footer>
+    
+    <script>
+        // Toggle user menu
+        document.getElementById('user-menu-button')?.addEventListener('click', function() {
+            document.getElementById('user-menu').classList.toggle('hidden');
+        });
+        
+        // Close the menu when clicking outside
+        window.addEventListener('click', function(e) {
+            if (!document.getElementById('user-menu-button')?.contains(e.target)) {
+                document.getElementById('user-menu')?.classList.add('hidden');
+            }
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
