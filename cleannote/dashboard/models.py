@@ -17,6 +17,8 @@ class Note(models.Model):
     ai_model = models.ForeignKey(AIModel, on_delete=models.SET_NULL, null=True)
     tokens_used = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
+    video_id = models.CharField(max_length=11, blank=True, null=True)  # Added field
+
     
     def __str__(self):
         return self.title
