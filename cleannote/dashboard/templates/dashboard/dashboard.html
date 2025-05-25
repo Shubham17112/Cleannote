@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{% load static %}
+
 
 {% block title %}Dashboard - CleanNote{% endblock %}
 
@@ -20,6 +22,15 @@
         .sidebar-closed {
             transform: translateX(0);
         }
+    }
+    
+    #manage-api-keys, #save-api-keys, #add-api-key, #cancel-api-keys {
+        pointer-events: auto;
+        z-index: 10;
+    }
+    
+    #api-key-modal {
+        z-index: 50;
     }
 </style>
 {% endblock %}
@@ -209,17 +220,12 @@
                         
                         <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
                             <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Manage API Keys</h3>
+                                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Manage API Keys for <span id="selected-model-name"></span></h3>
                                 <div class="space-y-4" id="api-keys-container">
-                                    <div class="flex items-center space-x-2">
-                                        <input type="password" class="api-key-input flex-1 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" placeholder="Enter API key">
-                                        <button type="button" class="remove-api-key inline-flex items-center px-2 py-1 border border-transparent text-sm font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
-                                            Remove
-                                        </button>
-                                    </div>
+                                    <!-- API keys will be populated dynamically -->
                                 </div>
                                 <button type="button" id="add-api-key" class="mt-4 inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                                    Add Another API Key
+                                    Add API Key
                                 </button>
                             </div>
                             <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
@@ -237,7 +243,6 @@
                 <!-- Additional Options -->
                 <div class="border-t border-gray-200 pt-4">
                     <h3 class="text-lg font-medium text-gray-900 mb-3">Additional Options</h3>
-                    
                     <div class="space-y-4">
                         <div class="flex items-start">
                             <div class="flex items-center h-5">
@@ -248,7 +253,6 @@
                                 <p class="text-gray-500">Generate quiz questions based on the video content</p>
                             </div>
                         </div>
-                        
                         <div class="flex items-start">
                             <div class="flex items-center h-5">
                                 <input id="include-timestamps" name="include-timestamps" type="checkbox" class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded" checked>
@@ -258,7 +262,6 @@
                                 <p class="text-gray-500">Add video timestamps to the generated notes</p>
                             </div>
                         </div>
-                        
                         <div class="flex items-start">
                             <div class="flex items-center h-5">
                                 <input id="enhance-transcript" name="enhance-transcript" type="checkbox" class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded">
@@ -302,11 +305,9 @@
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
+    document.addEventListener('DOMContentLoaded', () => {
     // YouTube player
     let player;
     let currentVideoId = '';
@@ -371,22 +372,35 @@
     const cancelApiKeysBtn = document.getElementById('cancel-api-keys');
     const apiKeysContainer = document.getElementById('api-keys-container');
     const enhanceTranscriptCheckbox = document.getElementById('enhance-transcript');
-    
+    const selectedModelName = document.getElementById('selected-model-name');
+
+    // Debug DOM elements
+    if (!manageApiKeysBtn) console.error('Manage API Keys button not found');
+    if (!apiKeyModal) console.error('API Key Modal not found');
+    if (!saveApiKeysBtn) console.error('Save API Keys button not found');
+    if (!aiModelSelect) console.error('AI Model Select not found');
+
     // Sidebar toggle (mobile)
     sidebarToggle.addEventListener('click', () => {
+        console.log('Sidebar toggle clicked');
         sidebar.classList.remove('sidebar-closed');
         sidebar.classList.add('sidebar-open');
     });
     
     sidebarClose.addEventListener('click', () => {
+        console.log('Sidebar close clicked');
         sidebar.classList.remove('sidebar-open');
         sidebar.classList.add('sidebar-closed');
     });
     
     // API Key Management
     manageApiKeysBtn.addEventListener('click', async () => {
+        console.log('Manage API Keys button clicked');
+        const selectedModelId = aiModelSelect.value;
+        const selectedModelText = aiModelSelect.options[aiModelSelect.selectedIndex].text;
+        
         try {
-            const response = await fetch('{% url "dashboard:get_api_keys" %}', {
+            const response = await fetch(`{% url "dashboard:get_api_keys" %}?ai_model=${selectedModelId}`, {
                 method: 'GET',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest'
@@ -394,6 +408,7 @@
             });
             const data = await response.json();
             apiKeysContainer.innerHTML = '';
+            selectedModelName.textContent = selectedModelText;
             
             if (data.api_keys && data.api_keys.length > 0) {
                 data.api_keys.forEach(key => addApiKeyInput(key));
@@ -403,15 +418,17 @@
             
             apiKeyModal.classList.remove('hidden');
         } catch (error) {
+            console.error('Error loading API keys:', error);
             showError('Failed to load API keys');
         }
     });
     
     function addApiKeyInput(value = '') {
+        console.log('Adding API key input with value:', value);
         const div = document.createElement('div');
         div.className = 'flex items-center space-x-2 mb-2';
         div.innerHTML = `
-            <input type="password" class="api-key-input flex-1 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" value="${value}" placeholder="Enter API key">
+            <input type="text" class="api-key-input flex-1 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" value="${value}" placeholder="Enter API key">
             <button type="button" class="remove-api-key inline-flex items-center px-2 py-1 border border-transparent text-sm font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
                 Remove
             </button>
@@ -426,10 +443,12 @@
     }
     
     addApiKeyBtn.addEventListener('click', () => {
+        console.log('Add API Key button clicked');
         addApiKeyInput();
     });
     
     saveApiKeysBtn.addEventListener('click', async () => {
+        console.log('Save API Keys button clicked');
         const apiKeys = Array.from(document.querySelectorAll('.api-key-input'))
             .map(input => input.value.trim())
             .filter(key => key !== '');
@@ -457,16 +476,19 @@
             apiKeyModal.classList.add('hidden');
             alert('API keys saved successfully');
         } catch (error) {
+            console.error('Error saving API keys:', error);
             showError(error.message);
         }
     });
     
     cancelApiKeysBtn.addEventListener('click', () => {
+        console.log('Cancel API Keys button clicked');
         apiKeyModal.classList.add('hidden');
     });
     
     // Generate note
     generateBtn.addEventListener('click', async () => {
+        console.log('Generate button clicked');
         const youtubeUrl = youtubeUrlInput.value.trim();
         if (!youtubeUrl) {
             showError('Please enter a YouTube URL');
@@ -527,6 +549,7 @@
             // Save note ID for save button
             saveNoteBtn.dataset.noteId = data.note_id;
         } catch (error) {
+            console.error('Error generating note:', error);
             loadingSection.classList.add('hidden');
             showError(error.message);
         }
@@ -540,17 +563,20 @@
     
     // Fullscreen note
     fullscreenNoteBtn.addEventListener('click', () => {
+        console.log('Fullscreen button clicked');
         modalContent.innerHTML = noteContent.innerHTML;
         fullscreenModal.classList.remove('hidden');
     });
     
     // Close modal
     closeModal.addEventListener('click', () => {
+        console.log('Close modal button clicked');
         fullscreenModal.classList.add('hidden');
     });
     
     // Download note
     downloadNoteBtn.addEventListener('click', () => {
+        console.log('Download button clicked');
         const content = noteContent.innerText;
         const blob = new Blob([content], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
@@ -562,5 +588,7 @@
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     });
+});
 </script>
 {% endblock %}
+

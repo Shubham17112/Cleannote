@@ -1,6 +1,3 @@
-
-#### 2. Updated View (`views.py`)
-
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
@@ -10,6 +7,12 @@ from .utils import extract_video_id, get_youtube_transcript, calculate_token_usa
 import json
 import google.generativeai as genai
 import openai
+
+# Default API keys for testing
+DEFAULT_API_KEYS = {
+    'Gemini': 'AIzaSyDs9YPEqFHpkQXaFRUQLdEio6_nD56n5CI',
+    'GPT': 'YOUR_DEFAULT_OPENAI_API_KEY'
+}
 
 @login_required
 def dashboard(request):
@@ -36,7 +39,7 @@ def generate_note(request):
     if not video_id:
         return JsonResponse({'error': 'Invalid YouTube URL'}, status=400)
     
-    # Get transcript using utils.py
+    # Get transcript
     transcript = get_youtube_transcript(video_id, enhance_transcript)
     if not transcript:
         return JsonResponse({'error': 'Unable to fetch transcript'}, status=400)
@@ -52,26 +55,23 @@ def generate_note(request):
     for api_key in user_api_keys:
         try:
             note_content = process_with_ai(transcript, api_key.api_key, include_timestamps, create_quiz, ai_model.name)
-            print('user api key used',  api_key.api_key)
             success = True
             break
         except Exception as e:
-            print(f"User API key error for {ai_model.name}: {str(e)}")
             continue
     
-    # Try default API key only if no user keys succeed
-    if not success and ai_model.api_key_field:
+    # Try default API key if user keys fail or don't exist
+    if not success and ai_model.name in DEFAULT_API_KEYS:
         try:
-            note_content = process_with_ai(transcript, ai_model.api_key_field, include_timestamps, create_quiz, ai_model.name)
-            print('defult api key used', ai_model.api_key_field)
+            note_content = process_with_ai(transcript, DEFAULT_API_KEYS[ai_model.name], include_timestamps, create_quiz, ai_model.name)
             success = True
         except Exception as e:
-            print(f"Default API key error for {ai_model.name}: {str(e)}")
+            pass
     
     if not success:
         return JsonResponse({'error': 'All API keys exhausted or invalid'}, status=400)
     
-    # Calculate tokens using utils.py
+    # Calculate tokens and save note
     tokens_used = calculate_token_usage(note_content)
     if hasattr(request.user, 'profile'):
         request.user.profile.tokens_remaining -= tokens_used
@@ -104,7 +104,7 @@ def save_api_keys(request):
     try:
         ai_model = get_object_or_404(AIModel, id=ai_model_id)
         
-        # Clear existing keys for this model and user
+        # Clear existing keys for this model
         UserAPIKey.objects.filter(user=request.user, ai_model=ai_model).delete()
         
         # Save new keys
@@ -161,7 +161,7 @@ def process_with_ai(transcript, api_key, include_timestamps, create_quiz, ai_mod
         try:
             openai.api_key = api_key
             response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
+                model="gpt-3.5-turbo",  # or gpt-4 if available
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant that generates notes from transcripts."},
                     {"role": "user", "content": prompt}
