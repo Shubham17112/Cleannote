@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
 
-
 {% block title %}Dashboard - CleanNote{% endblock %}
 
 {% block extra_head %}
@@ -31,6 +30,17 @@
     
     #api-key-modal {
         z-index: 50;
+    }
+
+    /* Resizable containers */
+    .resizable-container {
+        position: relative;
+        resize: both;
+        overflow: auto;
+        min-width: 300px;
+        min-height: 200px;
+        max-width: 100%;
+        max-height: 600px;
     }
 </style>
 {% endblock %}
@@ -72,7 +82,7 @@
                     <div class="hidden" id="result-section">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <!-- YouTube Player -->
-                            <div>
+                            <div class="resizable-container">
                                 <div class="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden bg-gray-100">
                                     <div id="youtube-player"></div>
                                 </div>
@@ -80,7 +90,7 @@
                             </div>
                             
                             <!-- Note Content -->
-                            <div class="bg-gray-50 p-4 rounded-lg">
+                            <div class="resizable-container bg-gray-50 p-4 rounded-lg">
                                 <div class="flex justify-between items-start mb-4">
                                     <h3 class="text-lg font-medium text-gray-900">AI Generated Notes</h3>
                                     <div class="flex space-x-2">
@@ -186,13 +196,18 @@
         
         <!-- Sidebar -->
         <div class="sidebar fixed top-0 right-0 w-64 h-full bg-white shadow-lg z-10 p-4 md:static md:w-80 md:ml-6 md:mt-0 sidebar-closed md:sidebar-open">
-            <div class="flex justify-between items-center mb-6 md:hidden">
+            <div class="flex justify-between items-center mb-6">
                 <h3 class="text-lg font-medium text-gray-900">Settings</h3>
-                <button type="button" id="sidebar-close" class="text-gray-400 hover:text-gray-500">
-                    <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
+                <div class="flex space-x-2">
+                    <button type="button" id="sidebar-close" class="text-gray-400 hover:text-gray-500 md:hidden">
+                        <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                    <button type="button" id="hide-sidebar" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-gray-700 bg-gray-100 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                        Hide
+                    </button>
+                </div>
             </div>
             
             <div class="space-y-6">
@@ -244,6 +259,24 @@
                 <div class="border-t border-gray-200 pt-4">
                     <h3 class="text-lg font-medium text-gray-900 mb-3">Additional Options</h3>
                     <div class="space-y-4">
+                        <div class="flex items-start">
+                            <div class="flex items-center h-5">
+                                <input id="generate-note" name="generate-note" type="checkbox" class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded" checked>
+                            </div>
+                            <div class="ml-3 text-sm">
+                                <label for="generate-note" class="font-medium text-gray-700">Generate Note</label>
+                                <p class="text-gray-500">Generate AI-powered notes from the video</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <div class="flex items-center h-5">
+                                <input id="show-transcript" name="show-transcript" type="checkbox" class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded">
+                            </div>
+                            <div class="ml-3 text-sm">
+                                <label for="show-transcript" class="font-medium text-gray-700">Show Transcript</label>
+                                <p class="text-gray-500">Display the video transcript</p>
+                            </div>
+                        </div>
                         <div class="flex items-start">
                             <div class="flex items-center h-5">
                                 <input id="create-quiz" name="create-quiz" type="checkbox" class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded">
@@ -308,287 +341,316 @@
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-    // YouTube player
-    let player;
-    let currentVideoId = '';
-    
-    function onYouTubeIframeAPIReady() {
-        // Player will be initialized when a video is loaded
-    }
-    
-    function loadYouTubeVideo(videoId) {
-        if (player && currentVideoId === videoId) {
-            return;
+        // YouTube player
+        let player;
+        let currentVideoId = '';
+        
+        function onYouTubeIframeAPIReady() {
+            // Player will be initialized when a video is loaded
         }
         
-        currentVideoId = videoId;
-        
-        if (player) {
-            player.loadVideoById(videoId);
-        } else {
-            player = new YT.Player('youtube-player', {
-                height: '100%',
-                width: '100%',
-                videoId: videoId,
-                playerVars: {
-                    'playsinline': 1
-                }
-            });
-        }
-    }
-    
-    // Extract YouTube video ID from URL
-    function extractVideoId(url) {
-        const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
-        const match = url.match(regExp);
-        return (match && match[7].length === 11) ? match[7] : false;
-    }
-    
-    // DOM elements
-    const youtubeUrlInput = document.getElementById('youtube-url');
-    const generateBtn = document.getElementById('generate-btn');
-    const resultSection = document.getElementById('result-section');
-    const loadingSection = document.getElementById('loading-section');
-    const errorSection = document.getElementById('error-section');
-    const errorMessage = document.getElementById('error-message');
-    const noteContent = document.getElementById('note-content');
-    const transcriptSection = document.getElementById('transcript-section');
-    const transcriptContent = document.getElementById('transcript-content');
-    const tokensRemaining = document.getElementById('tokens-remaining');
-    const saveNoteBtn = document.getElementById('save-note-btn');
-    const downloadNoteBtn = document.getElementById('download-note-btn');
-    const fullscreenNoteBtn = document.getElementById('fullscreen-note-btn');
-    const fullscreenModal = document.getElementById('fullscreen-modal');
-    const modalContent = document.getElementById('modal-content');
-    const closeModal = document.getElementById('close-modal');
-    const sidebarToggle = document.getElementById('sidebar-toggle');
-    const sidebarClose = document.getElementById('sidebar-close');
-    const sidebar = document.querySelector('.sidebar');
-    const aiModelSelect = document.getElementById('ai-model');
-    const manageApiKeysBtn = document.getElementById('manage-api-keys');
-    const apiKeyModal = document.getElementById('api-key-modal');
-    const addApiKeyBtn = document.getElementById('add-api-key');
-    const saveApiKeysBtn = document.getElementById('save-api-keys');
-    const cancelApiKeysBtn = document.getElementById('cancel-api-keys');
-    const apiKeysContainer = document.getElementById('api-keys-container');
-    const enhanceTranscriptCheckbox = document.getElementById('enhance-transcript');
-    const selectedModelName = document.getElementById('selected-model-name');
-
-    // Debug DOM elements
-    if (!manageApiKeysBtn) console.error('Manage API Keys button not found');
-    if (!apiKeyModal) console.error('API Key Modal not found');
-    if (!saveApiKeysBtn) console.error('Save API Keys button not found');
-    if (!aiModelSelect) console.error('AI Model Select not found');
-
-    // Sidebar toggle (mobile)
-    sidebarToggle.addEventListener('click', () => {
-        console.log('Sidebar toggle clicked');
-        sidebar.classList.remove('sidebar-closed');
-        sidebar.classList.add('sidebar-open');
-    });
-    
-    sidebarClose.addEventListener('click', () => {
-        console.log('Sidebar close clicked');
-        sidebar.classList.remove('sidebar-open');
-        sidebar.classList.add('sidebar-closed');
-    });
-    
-    // API Key Management
-    manageApiKeysBtn.addEventListener('click', async () => {
-        console.log('Manage API Keys button clicked');
-        const selectedModelId = aiModelSelect.value;
-        const selectedModelText = aiModelSelect.options[aiModelSelect.selectedIndex].text;
-        
-        try {
-            const response = await fetch(`{% url "dashboard:get_api_keys" %}?ai_model=${selectedModelId}`, {
-                method: 'GET',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
-            const data = await response.json();
-            apiKeysContainer.innerHTML = '';
-            selectedModelName.textContent = selectedModelText;
+        function loadYouTubeVideo(videoId) {
+            if (player && currentVideoId === videoId) {
+                return;
+            }
             
-            if (data.api_keys && data.api_keys.length > 0) {
-                data.api_keys.forEach(key => addApiKeyInput(key));
+            currentVideoId = videoId;
+            
+            if (player) {
+                player.loadVideoById(videoId);
             } else {
-                addApiKeyInput();
+                player = new YT.Player('youtube-player', {
+                    height: '100%',
+                    width: '100%',
+                    videoId: videoId,
+                    playerVars: {
+                        'playsinline': 1
+                    }
+                });
             }
-            
-            apiKeyModal.classList.remove('hidden');
-        } catch (error) {
-            console.error('Error loading API keys:', error);
-            showError('Failed to load API keys');
         }
-    });
-    
-    function addApiKeyInput(value = '') {
-        console.log('Adding API key input with value:', value);
-        const div = document.createElement('div');
-        div.className = 'flex items-center space-x-2 mb-2';
-        div.innerHTML = `
-            <input type="text" class="api-key-input flex-1 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" value="${value}" placeholder="Enter API key">
-            <button type="button" class="remove-api-key inline-flex items-center px-2 py-1 border border-transparent text-sm font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
-                Remove
-            </button>
-        `;
-        apiKeysContainer.appendChild(div);
         
-        div.querySelector('.remove-api-key').addEventListener('click', () => {
-            if (apiKeysContainer.children.length > 1) {
-                div.remove();
-            }
+        // Extract YouTube video ID from URL
+        function extractVideoId(url) {
+            const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+            const match = url.match(regExp);
+            return (match && match[7].length === 11) ? match[7] : false;
+        }
+        
+        // DOM elements
+        const youtubeUrlInput = document.getElementById('youtube-url');
+        const generateBtn = document.getElementById('generate-btn');
+        const resultSection = document.getElementById('result-section');
+        const loadingSection = document.getElementById('loading-section');
+        const errorSection = document.getElementById('error-section');
+        const errorMessage = document.getElementById('error-message');
+        const noteContent = document.getElementById('note-content');
+        const transcriptSection = document.getElementById('transcript-section');
+        const transcriptContent = document.getElementById('transcript-content');
+        const tokensRemaining = document.getElementById('tokens-remaining');
+        const saveNoteBtn = document.getElementById('save-note-btn');
+        const downloadNoteBtn = document.getElementById('download-note-btn');
+        const fullscreenNoteBtn = document.getElementById('fullscreen-note-btn');
+        const fullscreenModal = document.getElementById('fullscreen-modal');
+        const modalContent = document.getElementById('modal-content');
+        const closeModal = document.getElementById('close-modal');
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+        const sidebarClose = document.getElementById('sidebar-close');
+        const sidebar = document.querySelector('.sidebar');
+        const hideSidebarBtn = document.getElementById('hide-sidebar');
+        const aiModelSelect = document.getElementById('ai-model');
+        const manageApiKeysBtn = document.getElementById('manage-api-keys');
+        const apiKeyModal = document.getElementById('api-key-modal');
+        const addApiKeyBtn = document.getElementById('add-api-key');
+        const saveApiKeysBtn = document.getElementById('save-api-keys');
+        const cancelApiKeysBtn = document.getElementById('cancel-api-keys');
+        const apiKeysContainer = document.getElementById('api-keys-container');
+        const generateNoteCheckbox = document.getElementById('generate-note');
+        const showTranscriptCheckbox = document.getElementById('show-transcript');
+        const enhanceTranscriptCheckbox = document.getElementById('enhance-transcript');
+        const selectedModelName = document.getElementById('selected-model-name');
+
+        // Debug DOM elements
+        if (!manageApiKeysBtn) console.error('Manage API Keys button not found');
+        if (!apiKeyModal) console.error('API Key Modal not found');
+        if (!saveApiKeysBtn) console.error('Save API Keys button not found');
+        if (!aiModelSelect) console.error('AI Model Select not found');
+
+        // Sidebar toggle (mobile)
+        sidebarToggle.addEventListener('click', () => {
+            console.log('Sidebar toggle clicked');
+            sidebar.classList.remove('sidebar-closed');
+            sidebar.classList.add('sidebar-open');
         });
-    }
-    
-    addApiKeyBtn.addEventListener('click', () => {
-        console.log('Add API Key button clicked');
-        addApiKeyInput();
-    });
-    
-    saveApiKeysBtn.addEventListener('click', async () => {
-        console.log('Save API Keys button clicked');
-        const apiKeys = Array.from(document.querySelectorAll('.api-key-input'))
-            .map(input => input.value.trim())
-            .filter(key => key !== '');
         
-        const formData = new FormData();
-        formData.append('ai_model', aiModelSelect.value);
-        formData.append('api_keys', JSON.stringify(apiKeys));
-        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+        sidebarClose.addEventListener('click', () => {
+            console.log('Sidebar close clicked');
+            sidebar.classList.remove('sidebar-open');
+            sidebar.classList.add('sidebar-closed');
+        });
+
+        // Hide sidebar
+        hideSidebarBtn.addEventListener('click', () => {
+            console.log('Hide sidebar button clicked');
+            sidebar.classList.remove('sidebar-open');
+            sidebar.classList.add('sidebar-closed');
+        });
         
-        try {
-            const response = await fetch('{% url "dashboard:save_api_keys" %}', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
-            
-            const data = await response.json();
-            
-            if (!response.ok) {
-                throw new Error(data.error || 'Failed to save API keys');
-            }
-            
-            apiKeyModal.classList.add('hidden');
-            alert('API keys saved successfully');
-        } catch (error) {
-            console.error('Error saving API keys:', error);
-            showError(error.message);
-        }
-    });
-    
-    cancelApiKeysBtn.addEventListener('click', () => {
-        console.log('Cancel API Keys button clicked');
-        apiKeyModal.classList.add('hidden');
-    });
-    
-    // Generate note
-    generateBtn.addEventListener('click', async () => {
-        console.log('Generate button clicked');
-        const youtubeUrl = youtubeUrlInput.value.trim();
-        if (!youtubeUrl) {
-            showError('Please enter a YouTube URL');
-            return;
-        }
-        
-        const videoId = extractVideoId(youtubeUrl);
-        if (!videoId) {
-            showError('Invalid YouTube URL');
-            return;
-        }
-        
-        // Show loading
-        resultSection.classList.add('hidden');
-        errorSection.classList.add('hidden');
-        loadingSection.classList.remove('hidden');
-        
-        // Get form data
-        const formData = new FormData();
-        formData.append('youtube_url', youtubeUrl);
-        formData.append('ai_model', aiModelSelect.value);
-        formData.append('include_timestamps', document.getElementById('include-timestamps').checked);
-        formData.append('create_quiz', document.getElementById('create-quiz').checked);
-        formData.append('enhance_transcript', enhanceTranscriptCheckbox.checked);
-        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
-        
-        try {
-            const response = await fetch('{% url "dashboard:generate_note" %}', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
-            
-            const data = await response.json();
-            
-            if (!response.ok) {
-                throw new Error(data.error || 'Failed to generate note');
-            }
-            
-            // Update tokens remaining
-            tokensRemaining.textContent = data.tokens_remaining;
-            
-            // Show result
-            noteContent.innerHTML = data.note_content;
-            if (data.transcript && enhanceTranscriptCheckbox.checked) {
-                transcriptContent.innerHTML = data.transcript;
+        // Show/hide transcript based on checkbox
+        showTranscriptCheckbox.addEventListener('change', () => {
+            console.log('Show transcript checkbox changed:', showTranscriptCheckbox.checked);
+            if (showTranscriptCheckbox.checked && transcriptContent.innerHTML.trim() !== '<p class="text-gray-500 italic">Transcript will appear here...</p>') {
                 transcriptSection.classList.remove('hidden');
             } else {
                 transcriptSection.classList.add('hidden');
             }
-            loadYouTubeVideo(data.video_id);
+        });     
+        
+        // API Key Management
+        manageApiKeysBtn.addEventListener('click', async () => {
+            console.log('Manage API Keys button clicked');
+            const selectedModelId = aiModelSelect.value;
+            const selectedModelText = aiModelSelect.options[aiModelSelect.selectedIndex].text;
             
-            loadingSection.classList.add('hidden');
-            resultSection.classList.remove('hidden');
+            try {
+                const response = await fetch(`{% url "dashboard:get_api_keys" %}?ai_model=${selectedModelId}`, {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                const data = await response.json();
+                apiKeysContainer.innerHTML = '';
+                selectedModelName.textContent = selectedModelText;
+                
+                if (data.api_keys && data.api_keys.length > 0) {
+                    data.api_keys.forEach(key => addApiKeyInput(key));
+                } else {
+                    addApiKeyInput();
+                }
+                
+                apiKeyModal.classList.remove('hidden');
+            } catch (error) {
+                console.error('Error loading API keys:', error);
+                showError('Failed to load API keys');
+            }
+        });
+        
+        function addApiKeyInput(value = '') {
+            console.log('Adding API key input with value:', value);
+            const div = document.createElement('div');
+            div.className = 'flex items-center space-x-2 mb-2';
+            div.innerHTML = `
+                <input type="text" class="api-key-input flex-1 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" value="${value}" placeholder="Enter API key">
+                <button type="button" class="remove-api-key inline-flex items-center px-2 py-1 border border-transparent text-sm font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                    Remove
+                </button>
+            `;
+            apiKeysContainer.appendChild(div);
             
-            // Save note ID for save button
-            saveNoteBtn.dataset.noteId = data.note_id;
-        } catch (error) {
-            console.error('Error generating note:', error);
-            loadingSection.classList.add('hidden');
-            showError(error.message);
+            div.querySelector('.remove-api-key').addEventListener('click', () => {
+                if (apiKeysContainer.children.length > 1) {
+                    div.remove();
+                }
+            });
         }
+        
+        addApiKeyBtn.addEventListener('click', () => {
+            console.log('Add API Key button clicked');
+            addApiKeyInput();
+        });
+        
+        saveApiKeysBtn.addEventListener('click', async () => {
+            console.log('Save API Keys button clicked');
+            const apiKeys = Array.from(document.querySelectorAll('.api-key-input'))
+                .map(input => input.value.trim())
+                .filter(key => key !== '');
+            
+            const formData = new FormData();
+            formData.append('ai_model', aiModelSelect.value);
+            formData.append('api_keys', JSON.stringify(apiKeys));
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+            
+            try {
+                const response = await fetch('{% url "dashboard:save_api_keys" %}', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to save API keys');
+                }
+                
+                apiKeyModal.classList.add('hidden');
+                alert('API keys saved successfully');
+            } catch (error) {
+                console.error('Error saving API keys:', error);
+                showError(error.message);
+            }
+        });
+        
+        cancelApiKeysBtn.addEventListener('click', () => {
+            console.log('Cancel API Keys button clicked');
+            apiKeyModal.classList.add('hidden');
+        });
+        
+        // Generate note
+        generateBtn.addEventListener('click', async () => {
+            console.log('Generate button clicked');
+            const youtubeUrl = youtubeUrlInput.value.trim();
+            if (!youtubeUrl) {
+                showError('Please enter a YouTube URL');
+                return;
+            }
+            
+            const videoId = extractVideoId(youtubeUrl);
+            if (!videoId) {
+                showError('Invalid YouTube URL');
+                return;
+            }
+            
+            // Show loading
+            resultSection.classList.add('hidden');
+            errorSection.classList.add('hidden');
+            loadingSection.classList.remove('hidden');
+            
+            // Get form data
+            const formData = new FormData();
+            formData.append('youtube_url', youtubeUrl);
+            formData.append('ai_model', aiModelSelect.value);
+            formData.append('generate_note', generateNoteCheckbox.checked);
+            formData.append('show_transcript', showTranscriptCheckbox.checked);
+            formData.append('include_timestamps', document.getElementById('include-timestamps').checked);
+            formData.append('create_quiz', document.getElementById('create-quiz').checked);
+            formData.append('enhance_transcript', enhanceTranscriptCheckbox.checked);
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+            
+            try {
+                const response = await fetch('{% url "dashboard:generate_note" %}', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                const data = await response.json();
+                console.log('Backend response:', data); // Debug the entire response
+        console.log('Transcript:', data.transcript); // Debug the transcript specifically
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to generate note');
+                }
+                
+                // Update tokens remaining
+                tokensRemaining.textContent = data.tokens_remaining;
+                
+                // Show result
+                if (generateNoteCheckbox.checked) {
+                    noteContent.innerHTML = data.note_content || '<p class="text-gray-500 italic">Generated notes will appear here...</p>';
+                } else {
+                    noteContent.innerHTML = '<p class="text-gray-500 italic">Note generation disabled</p>';
+                }
+                
+                if (data.transcript && (showTranscriptCheckbox.checked || enhanceTranscriptCheckbox.checked)) {
+                    transcriptContent.innerHTML = data.transcript;
+                    transcriptSection.classList.remove('hidden');
+                } else {
+                    transcriptSection.classList.add('hidden');
+                }
+                
+                loadYouTubeVideo(data.video_id);
+                
+                loadingSection.classList.add('hidden');
+                resultSection.classList.remove('hidden');
+                
+                // Save note ID for save button
+                saveNoteBtn.dataset.noteId = data.note_id;
+            } catch (error) {
+                console.error('Error generating note:', error);
+                loadingSection.classList.add('hidden');
+                showError(error.message);
+            }
+        });
+        
+        // Show error message
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorSection.classList.remove('hidden');
+        }
+        
+        // Fullscreen note
+        fullscreenNoteBtn.addEventListener('click', () => {
+            console.log('Fullscreen button clicked');
+            modalContent.innerHTML = noteContent.innerHTML;
+            fullscreenModal.classList.remove('hidden');
+        });
+        
+        // Close modal
+        closeModal.addEventListener('click', () => {
+            console.log('Close modal button clicked');
+            fullscreenModal.classList.add('hidden');
+        });
+        
+        // Download note
+        downloadNoteBtn.addEventListener('click', () => {
+            console.log('Download button clicked');
+            const content = noteContent.innerText;
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'cleannote.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
     });
-    
-    // Show error message
-    function showError(message) {
-        errorMessage.textContent = message;
-        errorSection.classList.remove('hidden');
-    }
-    
-    // Fullscreen note
-    fullscreenNoteBtn.addEventListener('click', () => {
-        console.log('Fullscreen button clicked');
-        modalContent.innerHTML = noteContent.innerHTML;
-        fullscreenModal.classList.remove('hidden');
-    });
-    
-    // Close modal
-    closeModal.addEventListener('click', () => {
-        console.log('Close modal button clicked');
-        fullscreenModal.classList.add('hidden');
-    });
-    
-    // Download note
-    downloadNoteBtn.addEventListener('click', () => {
-        console.log('Download button clicked');
-        const content = noteContent.innerText;
-        const blob = new Blob([content], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'cleannote.txt';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    });
-});
 </script>
-{% endblock %}
 
+{% endblock %}

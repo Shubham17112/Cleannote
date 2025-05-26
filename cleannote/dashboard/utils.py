@@ -21,13 +21,14 @@ def extract_video_id(youtube_url):
     
     return None
 
-def get_youtube_transcript(video_id, enhance_transcript=False):
+def get_youtube_transcript(video_id, enhance_transcript):
     """Get the transcript of a YouTube video, optionally using Whisper for enhanced transcription"""
     try:
         # Try YouTube's transcript API
         transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
         transcript_text = ' '.join([item['text'] for item in transcript_list])
         if not enhance_transcript:
+            print(transcript_text)
             return transcript_text
         
         # If enhanced transcription is requested, use Whisper

@@ -45,7 +45,7 @@ def generate_note(request):
     ai_model = get_object_or_404(AIModel, id=ai_model_id)
     
     # Try user API keys first
-    user_api_keys = UserAPIKey.objects.filter(user=request.user, ai_model=ai_model)
+    user_api_keys = UserAPIKey.objects.filter(user=request.user, ai_model=ai_model) 
     note_content = ""
     success = False
     
@@ -92,7 +92,7 @@ def generate_note(request):
         'note_content': note_content,
         'video_id': video_id,
         'tokens_remaining': request.user.profile.tokens_remaining,
-        'transcript': transcript if enhance_transcript else ''
+        'transcript': transcript 
     })
 
 @login_required

@@ -34,46 +34,52 @@ def generate_note(request):
     include_timestamps = request.POST.get('include_timestamps') == 'true'
     create_quiz = request.POST.get('create_quiz') == 'true'
     enhance_transcript = request.POST.get('enhance_transcript') == 'true'
+    show_transcript = request.POST.get('show_transcript') == 'true'  # New parameter
     
     video_id = extract_video_id(youtube_url)
     if not video_id:
         return JsonResponse({'error': 'Invalid YouTube URL'}, status=400)
     
-    # Get transcript
-    transcript = get_youtube_transcript(video_id, enhance_transcript)
-    if not transcript:
+    # Get transcript if either show_transcript or enhance_transcript is true
+    transcript = get_youtube_transcript(video_id, enhance_transcript) if (show_transcript or enhance_transcript) else ''
+    if not transcript and (show_transcript or enhance_transcript):
         return JsonResponse({'error': 'Unable to fetch transcript'}, status=400)
     
     # Get AI model
     ai_model = get_object_or_404(AIModel, id=ai_model_id)
     
-    # Try user API keys first
-    user_api_keys = UserAPIKey.objects.filter(user=request.user, ai_model=ai_model)
+    # Process note only if generate_note is true
+    generate_note = request.POST.get('generate_note') == 'true'
     note_content = ""
-    success = False
+    success = True
     
-    for api_key in user_api_keys:
-        try:
-            note_content = process_with_ai(transcript, api_key.api_key, include_timestamps, create_quiz, ai_model.name)
-            success = True
-            break
-        except Exception as e:
-            continue
+    if generate_note:
+        # Try user API keys first
+        user_api_keys = UserAPIKey.objects.filter(user=request.user, ai_model=ai_model)
+        success = False
+        
+        for api_key in user_api_keys:
+            try:
+                note_content = process_with_ai(transcript, api_key.api_key, include_timestamps, create_quiz, ai_model.name)
+                success = True
+                break
+            except Exception as e:
+                continue
+        
+        # Try default API key if user keys fail or don't exist
+        if not success and ai_model.name in DEFAULT_API_KEYS:
+            try:
+                note_content = process_with_ai(transcript, DEFAULT_API_KEYS[ai_model.name], include_timestamps, create_quiz, ai_model.name)
+                success = True
+            except Exception as e:
+                pass
+        
+        if not success:
+            return JsonResponse({'error': 'All API keys exhausted or invalid'}, status=400)
     
-    # Try default API key if user keys fail or don't exist
-    if not success and ai_model.name in DEFAULT_API_KEYS:
-        try:
-            note_content = process_with_ai(transcript, DEFAULT_API_KEYS[ai_model.name], include_timestamps, create_quiz, ai_model.name)
-            success = True
-        except Exception as e:
-            pass
-    
-    if not success:
-        return JsonResponse({'error': 'All API keys exhausted or invalid'}, status=400)
-    
-    # Calculate tokens and save note
-    tokens_used = calculate_token_usage(note_content)
-    if hasattr(request.user, 'profile'):
+    # Calculate tokens and save note only if note was generated
+    tokens_used = calculate_token_usage(note_content) if generate_note else 0
+    if generate_note and hasattr(request.user, 'profile'):
         request.user.profile.tokens_remaining -= tokens_used
         request.user.profile.save()
     
@@ -85,16 +91,17 @@ def generate_note(request):
         youtube_url=youtube_url,
         video_id=video_id,
         tokens_used=tokens_used
-    )
+    ) if generate_note else None
     
     return JsonResponse({
-        'note_id': note.id,
+        'note_id': note.id if note else None,
         'note_content': note_content,
         'video_id': video_id,
-        'tokens_remaining': request.user.profile.tokens_remaining,
-        'transcript': transcript if enhance_transcript else ''
+        'tokens_remaining': request.user.profile.tokens_remaining if hasattr(request.user, 'profile') else 0,
+        'transcript': transcript if (show_transcript or enhance_transcript) else ''
     })
-
+    
+    
 @login_required
 @require_POST
 def save_api_keys(request):
