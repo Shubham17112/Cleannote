@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}{{ note.title }} - CleanNote{% endblock %}
-
+{% load static %}
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
     <div class="mb-6">
@@ -67,11 +67,15 @@
         </div>
     </div>
 </div>
+<script src="{% static 'dashboard/scripts.js' %}"></script>
 {% endblock %}
 
 {% block extra_js %}
-<script>
-    // Download note
+
+
+<script >
+
+    
     document.getElementById('download-note-btn').addEventListener('click', () => {
         const content = `{{ note.content|escapejs }}`;
         const blob = new Blob([content], { type: 'text/plain' });

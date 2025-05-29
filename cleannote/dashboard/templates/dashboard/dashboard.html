@@ -5,24 +5,114 @@
 
 {% block extra_head %}
 <style>
+
+/* Split bar custom styles */
+.split-bar {
+    width: 6px;
+    background: #d1d5db;
+    cursor: col-resize;
+    position: relative;
+    z-index: 10;
+    transition: background 0.2s;
+}
+
+.split-bar:hover {
+    background: #9ca3af;
+}
+/* Sidebar styles */
+.sidebar {
+    width: 320px;
+    position: relative;
+    background: white;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.sidebar-hidden {
+    display: none;
+}
+
+/* Mobile settings button */
+.settings-toggle-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9;
+    opacity: 0;
+    pointer-events: none;
+    background-color: #4F46E5;
+    color: white;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: none;
+}
+
+.settings-toggle-btn.visible {
+    opacity: 1;
+    pointer-events: auto;
+    display: flex;
+}
+
+.settings-toggle-btn:hover {
+    background-color: #4338CA;
+}
+
+@media (min-width: 768px) {
     .sidebar {
-        transition: transform 0.3s ease;
+        position: relative;
     }
     
-    .sidebar-open {
-        transform: translateX(0);
+    .sidebar-hidden {
+        display: none;
     }
-    
-    .sidebar-closed {
-        transform: translateX(100%);
+
+    .settings-toggle-btn {
+        display: none;  /* Hide mobile settings button on desktop */
     }
-    
-    @media (min-width: 768px) {
-        .sidebar-closed {
-            transform: translateX(0);
-        }
+}
+
+@media (max-width: 767px) {
+    .settings-toggle-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 42px;
+        height: 42px;
     }
+
+    .settings-toggle-btn svg {
+        width: 24px;
+        height: 24px;
+    }
+} 
+
     
+/* Sidebar toggle button in header */
+.sidebar-toggle-btn {
+    background-color: rgb(79, 70, 229);
+    transition: all 0.2s;
+    padding: 10px;
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+.sidebar-toggle-btn:hover {
+    background-color: rgb(67, 56, 202);
+}
+
+.sidebar-toggle-btn svg {
+    width: 24px;
+    height: 24px;
+}
+
     #manage-api-keys, #save-api-keys, #add-api-key, #cancel-api-keys {
         pointer-events: auto;
         z-index: 10;
@@ -48,11 +138,17 @@
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
     <div class="flex flex-col md:flex-row">
+        
         <!-- Main Content -->
         <div class="flex-1">
             <div class="bg-white shadow rounded-lg p-6">
                 <h2 class="text-2xl font-bold text-gray-900 mb-6">Generate AI Notes from YouTube</h2>
-                
+                    <button type="button" id="show-settings" class="sidebar-toggle-btn rounded-md shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </button>
                 <div class="space-y-6">
                     <!-- YouTube URL Input -->
                     <div>
@@ -80,17 +176,23 @@
                     
                     <!-- YouTube Player and Note Section -->
                     <div class="hidden" id="result-section">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="flex w-full gap-2">
                             <!-- YouTube Player -->
-                            <div class="resizable-container">
-                                <div class="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden bg-gray-100">
-                                    <div id="youtube-player"></div>
+                            <div class="youtube-container flex-1 min-w-[300px] max-w-full relative">
+                                <button type="button" id="toggle-youtube" class="absolute top-2 right-2 bg-indigo-600 text-white p-1.5 rounded-md hover:bg-indigo-700 z-20">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-5 h-5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                                <div class="relative pt-[56.25%] bg-gray-200 rounded-lg overflow-hidden">
+                                    <div id="youtube-player" class="absolute top-0 left-0 w-full h-full"></div>
                                 </div>
                                 <div class="mt-2 text-sm text-gray-500" id="video-timestamp"></div>
                             </div>
-                            
+                            <!-- Split Bar -->
+                            <div class="split-bar"></div>
                             <!-- Note Content -->
-                            <div class="resizable-container bg-gray-50 p-4 rounded-lg">
+                            <div class="note-container flex-1 min-w-[300px] max-w-full bg-gray-50 p-4 rounded-lg">
                                 <div class="flex justify-between items-start mb-4">
                                     <h3 class="text-lg font-medium text-gray-900">AI Generated Notes</h3>
                                     <div class="flex space-x-2">
@@ -195,8 +297,8 @@
         </div>
         
         <!-- Sidebar -->
-        <div class="sidebar fixed top-0 right-0 w-64 h-full bg-white shadow-lg z-10 p-4 md:static md:w-80 md:ml-6 md:mt-0 sidebar-closed md:sidebar-open">
-            <div class="flex justify-between items-center mb-6">
+        <div class="sidebar fixed top-0 right-0 h-full bg-white shadow-lg z-10 p-4 md:static md:ml-6 md:mt-0 rounded-lg border border-gray-200" id="settings-sidebar">
+            <div class="flex justify-between items-center mb-6 bg-white rounded-md shadow-sm p-2">
                 <h3 class="text-lg font-medium text-gray-900">Settings</h3>
                 <div class="flex space-x-2">
                     <button type="button" id="sidebar-close" class="text-gray-400 hover:text-gray-500 md:hidden">
@@ -210,7 +312,7 @@
                 </div>
             </div>
             
-            <div class="space-y-6">
+            <div class="space-y-6" id="settings-details">
                 <!-- AI Model Selection -->
                 <div>
                     <label for="ai-model" class="block text-sm font-medium text-gray-700">AI Model</label>
@@ -309,6 +411,7 @@
             </div>
         </div>
     </div>
+
 </div>
 
 <!-- Fullscreen Note Modal -->
@@ -339,8 +442,11 @@
     </div>
 </div>
 <script src="https://www.youtube.com/iframe_api"></script>
+
 <script>
     document.addEventListener('DOMContentLoaded', () => {
+        // Sidebar initialization
+
         // YouTube player
         let player;
         let currentVideoId = '';
@@ -394,10 +500,13 @@
         const fullscreenModal = document.getElementById('fullscreen-modal');
         const modalContent = document.getElementById('modal-content');
         const closeModal = document.getElementById('close-modal');
-        const sidebarToggle = document.getElementById('sidebar-toggle');
-        const sidebarClose = document.getElementById('sidebar-close');
-        const sidebar = document.querySelector('.sidebar');
-        const hideSidebarBtn = document.getElementById('hide-sidebar');
+// Get HTML elements
+const settingsSidebar = document.getElementById('settings-sidebar');
+const showSettingsBtn = document.getElementById('show-settings');
+const hideSidebarBtn = document.getElementById('hide-sidebar');
+const sidebarCloseBtn = document.getElementById('sidebar-close');
+const settingsDetails = document.getElementById('settings-details');
+
         const aiModelSelect = document.getElementById('ai-model');
         const manageApiKeysBtn = document.getElementById('manage-api-keys');
         const apiKeyModal = document.getElementById('api-key-modal');
@@ -416,25 +525,7 @@
         if (!saveApiKeysBtn) console.error('Save API Keys button not found');
         if (!aiModelSelect) console.error('AI Model Select not found');
 
-        // Sidebar toggle (mobile)
-        sidebarToggle.addEventListener('click', () => {
-            console.log('Sidebar toggle clicked');
-            sidebar.classList.remove('sidebar-closed');
-            sidebar.classList.add('sidebar-open');
-        });
-        
-        sidebarClose.addEventListener('click', () => {
-            console.log('Sidebar close clicked');
-            sidebar.classList.remove('sidebar-open');
-            sidebar.classList.add('sidebar-closed');
-        });
 
-        // Hide sidebar
-        hideSidebarBtn.addEventListener('click', () => {
-            console.log('Hide sidebar button clicked');
-            sidebar.classList.remove('sidebar-open');
-            sidebar.classList.add('sidebar-closed');
-        });
         
         // Show/hide transcript based on checkbox
         showTranscriptCheckbox.addEventListener('change', () => {
@@ -650,7 +741,124 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         });
+    // Sidebar initialization
+
+    initializeSidebarEvents();
+        // Function to hide the sidebar
+        function hideSettings() {
+            settingsSidebar.classList.add('sidebar-hidden');
+            showSettingsBtn.classList.add('visible');
+            settingsDetails.style.display = 'none';
+            hideSidebarBtn.textContent = 'Show';
+        }
+
+        // Add click event listeners
+        function initializeSidebarEvents() {
+            console.log('button initialized')
+            if (hideSidebarBtn) {
+                hideSidebarBtn.addEventListener('click', hideSettings);
+            }
+
+            if (showSettingsBtn) {
+                console.log('Show Settings button clicked');
+                showSettingsBtn.addEventListener('click', showSettings);
+            }
+
+            if (sidebarCloseBtn) {
+                console.log('side bar close button clicked')
+                sidebarCloseBtn.addEventListener('click', hideSettings);
+            }
+        }
+    function showSettings() {
+        console.log('Show Settings button clicked');
+        settingsSidebar.classList.remove('sidebar-hidden');
+        showSettingsBtn.classList.remove('visible');
+        settingsDetails.style.display = 'block';
+        hideSidebarBtn.textContent = 'Hide';
+    }
+
+
+
+
+       // DOM elements for split bar and toggle functionality
+    var toggleYoutubeBtn = document.getElementById('toggle-youtube');
+    var youtubeContainer = document.querySelector('.youtube-container');
+    var noteContainer = document.querySelector('.note-container');
+    var splitBar = document.querySelector('.split-bar');
+
+    // Debug DOM elements
+    if (!toggleYoutubeBtn) console.error('Toggle YouTube button not found');
+    if (!youtubeContainer) console.error('YouTube container not found');
+    if (!noteContainer) console.error('Note container not found');
+    if (!splitBar) console.error('Split bar not found');
+
+    // Toggle YouTube player visibility
+    toggleYoutubeBtn.addEventListener('click', function () {
+        console.log('Toggle YouTube button clicked');
+        youtubeContainer.classList.toggle('hidden');
+        splitBar.classList.toggle('hidden');
+        if (youtubeContainer.classList.contains('hidden')) {
+            noteContainer.classList.remove('flex-1');
+            noteContainer.classList.add('flex-2');
+            toggleYoutubeBtn.innerHTML =
+                '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-5 h-5">' +
+                '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18" />' +
+                '</svg>';
+        } else {
+            noteContainer.classList.remove('flex-2');
+            noteContainer.classList.add('flex-1');
+            toggleYoutubeBtn.innerHTML =
+                '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-5 h-5">' +
+                '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />' +
+                '</svg>';
+        }
     });
+
+    // Split bar resizing
+    var isDragging = false;
+
+    splitBar.addEventListener('mousedown', function (e) {
+        isDragging = true;
+        document.body.style.cursor = 'col-resize';
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', function (e) {
+        if (!isDragging) return;
+        var container = document.querySelector('.flex.w-full');
+        var containerRect = container.getBoundingClientRect();
+        var newWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+        if (newWidth >= 30 && newWidth <= 70) {
+            youtubeContainer.style.flex = newWidth + '%';
+            noteContainer.style.flex = (100 - newWidth) + '%';
+        }
+    });
+
+    document.addEventListener('mouseup', function () {
+        isDragging = false;
+        document.body.style.cursor = 'default';
+    });
+
+
+
+    });
+
+
+
+
+
+
+
+
+
+
+    // side bar code 
+    // sidebar.js (without class)
+
+
+// Call the function when DOM is ready
+
 </script>
+
 
 {% endblock %}
