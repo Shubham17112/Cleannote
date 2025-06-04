@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}{{ note.title }} - CleanNote{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div class="mb-6">
+        <a href="{% url 'dashboard:dashboard' %}" class="text-indigo-600 hover:text-indigo-900">
+            &larr; Back to Dashboard
+        </a>
+    </div>
+    
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+        <div class="px-4 py-5 sm:px-6 bg-gray-50">
+            <h1 class="text-xl font-bold text-gray-900">{{ note.title }}</h1>
+            <p class="mt-1 max-w-2xl text-sm text-gray-500">
+                Created on {{ note.created_at|date:"F j, Y" }} using {{ note.ai_model.name }}
+            </p>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
+            <!-- YouTube Player -->
+            <div>
+                <div class="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden bg-gray-100">
+                    <iframe 
+                        src="https://www.youtube.com/embed/{{ video_id }}" 
+                        frameborder="0" 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                        allowfullscreen
+                        class="w-full h-full">
+                    </iframe>
+                </div>
+                <div class="mt-2 text-sm text-gray-500">
+                    <a href="{{ note.youtube_url }}" target="_blank" class="text-indigo-600 hover:text-indigo-900">
+                        Open video in YouTube
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Note Content -->
+            <div>
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-medium text-gray-900">AI Generated Notes</h2>
+                    <div class="flex space-x-2">
+                        <button type="button" id="download-note-btn" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-gray-700 bg-gray-100 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                            Download
+                        </button>
+                    </div>
+                </div>
+                <div class="prose prose-sm max-w-none bg-gray-50 p-4 rounded-lg">
+                    {{ note.content|linebreaks }}
+                </div>
+            </div>
+        </div>
+        
+        <div class="px-4 py-5 sm:px-6 bg-gray-50 border-t border-gray-200">
+            <div class="flex justify-between items-center">
+                <div>
+                    <span class="text-sm text-gray-500">Tokens used: {{ note.tokens_used }}</span>
+                </div>
+                <div>
+                    <a href="{% url 'dashboard:dashboard' %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Create New Note
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Download note
+    document.getElementById('download-note-btn').addEventListener('click', () => {
+        const content = `{{ note.content|escapejs }}`;
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '{{ note.title|slugify }}.txt';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    });
+</script>
+{% endblock %}
+

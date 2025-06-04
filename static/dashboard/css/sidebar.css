@@ -1,0 +1,68 @@
+/* Sidebar styles */
+.sidebar {
+    width: 320px;
+    position: relative;
+    background: white;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.sidebar-hidden {
+    display: none;
+}
+
+/* Mobile settings button */
+.settings-toggle-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9;
+    opacity: 0;
+    pointer-events: none;
+    background-color: #4F46E5;
+    color: white;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: none;
+}
+
+.settings-toggle-btn.visible {
+    opacity: 1;
+    pointer-events: auto;
+    display: flex;
+}
+
+.settings-toggle-btn:hover {
+    background-color: #4338CA;
+}
+
+@media (min-width: 768px) {
+    .sidebar {
+        position: relative;
+    }
+    
+    .sidebar-hidden {
+        display: none;
+    }
+
+    .settings-toggle-btn {
+        display: none;  /* Hide mobile settings button on desktop */
+    }
+}
+
+@media (max-width: 767px) {
+    .settings-toggle-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 42px;
+        height: 42px;
+    }
+
+    .settings-toggle-btn svg {
+        width: 24px;
+        height: 24px;
+    }
+} 

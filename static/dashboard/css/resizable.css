@@ -1,0 +1,250 @@
+/* Card-based resizable panels for YouTube video and notes */
+.result-card-container {
+    display: flex;
+    gap: 16px;
+    width: 100%;
+    margin-top: 20px;
+    position: relative;
+    min-height: 400px;
+    height: auto;
+}
+
+/* Card styles */
+.result-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #e5e7eb;
+    flex: 1;
+    min-width: 300px;
+    position: relative;
+    min-height: 400px;
+    height: auto;
+    max-height: calc(100vh - 100px);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background-color: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+    height: 52px;
+    flex-shrink: 0;
+    z-index: 2;
+}
+
+.card-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0;
+}
+
+.card-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.card-content {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 300px;
+}
+
+/* Card action buttons */
+.card-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    color: #6b7280;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.card-button:hover {
+    background-color: #f3f4f6;
+    color: #4f46e5;
+}
+
+.card-button svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* YouTube container */
+.youtube-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    background-color: #000;
+    min-height: 300px;
+}
+
+.youtube-container iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+/* Notes content */
+.notes-content {
+    padding: 16px;
+    overflow-y: auto;
+    flex: 1;
+    position: relative;
+    height: 100%;
+    min-height: 300px;
+    max-height: calc(100vh - 152px); /* 100vh - (header + card header) */
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.notes-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.notes-content::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+}
+
+.notes-content::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+.notes-content::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Vertical resizer for vertical resizing */
+.vertical-resizer {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 8px;
+    right: -4px;
+    cursor: ew-resize;
+    z-index: 20;
+    background-color: transparent;
+    transition: background-color 0.2s;
+}
+
+.vertical-resizer:hover,
+.vertical-resizer.active {
+    background-color: rgba(79, 70, 229, 0.2);
+}
+
+/* Horizontal resizer for vertical resizing */
+.horizontal-resizer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 8px;
+    bottom: -4px;
+    cursor: ns-resize;
+    z-index: 20;
+    background-color: transparent;
+    transition: background-color 0.2s;
+}
+
+.horizontal-resizer:hover,
+.horizontal-resizer.active {
+    background-color: rgba(79, 70, 229, 0.2);
+}
+
+/* Card maximized state */
+.card-maximized {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    border-radius: 0;
+    margin: 0;
+    max-height: 100vh;
+}
+
+.card-maximized .card-content {
+    height: calc(100vh - 52px);
+    max-height: none;
+}
+
+.card-maximized .notes-content {
+    max-height: calc(100vh - 52px);
+}
+
+.minimize-btn {
+    display: none;
+}
+
+.card-maximized .minimize-btn {
+    display: flex;
+}
+
+.card-maximized .maximize-btn {
+    display: none;
+}
+
+/* Lazy loading for long content */
+.notes-content .lazy-content {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.notes-content .lazy-content.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Loading indicator for lazy content */
+.load-more-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+    .result-card-container {
+        flex-direction: column;
+        height: auto;
+    }
+    
+    .result-card {
+        width: 100%;
+        height: auto;
+        min-width: 0;
+        max-height: none;
+    }
+    
+    .vertical-resizer {
+        display: none;
+    }
+    
+    .notes-content {
+        max-height: none;
+        height: auto;
+    }
+}

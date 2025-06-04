@@ -1,0 +1,7 @@
+myenv/
+__pycache__/
+*.dll
+*.lib
+*.pt
+node_modules/
+db.sqlite3
