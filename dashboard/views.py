@@ -1,4 +1,3 @@
-
 #### 2. Updated View (`views.py`)
 
 from django.shortcuts import render, get_object_or_404
@@ -10,6 +9,11 @@ from .utils import extract_video_id, get_youtube_transcript, calculate_token_usa
 import json
 import google.generativeai as genai
 import openai
+import os
+from django.conf import settings
+from langdetect import detect
+from deep_translator import GoogleTranslator
+from gtts import gTTS
 
 @login_required
 def dashboard(request):
@@ -173,3 +177,183 @@ def process_with_ai(transcript, api_key, include_timestamps, create_quiz, ai_mod
     
     else:
         raise Exception(f"Unsupported AI model: {ai_model_name}")
+
+def process_audio_transcript(request):
+    if request.method == 'POST':
+        try:
+            transcript = request.POST.get('transcript', '')
+            if not transcript:
+                return JsonResponse({'error': 'No transcript provided'}, status=400)
+            
+            # Create media directory if it doesn't exist
+            audio_dir = os.path.join(settings.MEDIA_ROOT, 'audio')
+            os.makedirs(audio_dir, exist_ok=True)
+            
+            # Detect language
+            try:
+                detected_lang = detect(transcript)
+                print(f"Detected language: {detected_lang}")
+            except:
+                detected_lang = 'en'  # Default to English if detection fails
+            
+            # Generate original audio
+            try:
+                original_path = os.path.join(audio_dir, 'original.mp3')
+                tts = gTTS(text=transcript, lang=detected_lang)
+                tts.save(original_path)
+                print(f"Original audio saved to: {original_path}")
+            except Exception as e:
+                print(f"Error generating original audio: {str(e)}")
+                return JsonResponse({'error': 'Failed to generate audio'}, status=500)
+            
+            # Initialize variables
+            translated_text = ''
+            
+            # Always attempt translation if not already in English
+            if detected_lang != 'en':
+                try:
+                    # Split text into manageable chunks
+                    chunks = transcript.split('\n')
+                    translated_chunks = []
+                    
+                    translator = GoogleTranslator(source=detected_lang, target='en')
+                    
+                    for chunk in chunks:
+                        if not chunk.strip():
+                            translated_chunks.append('')
+                            continue
+                            
+                        # Split long chunks into sentences
+                        if len(chunk) > 500:
+                            sentences = chunk.split('. ')
+                            translated_sentences = []
+                            
+                            for sentence in sentences:
+                                if sentence.strip():
+                                    try:
+                                        translated = translator.translate(sentence.strip())
+                                        translated_sentences.append(translated)
+                                    except Exception as e:
+                                        print(f"Translation error for sentence: {str(e)}")
+                                        translated_sentences.append(sentence)
+                                        
+                            translated_chunk = '. '.join(translated_sentences)
+                        else:
+                            try:
+                                translated_chunk = translator.translate(chunk)
+                            except Exception as e:
+                                print(f"Translation error for chunk: {str(e)}")
+                                translated_chunk = chunk
+                                
+                        translated_chunks.append(translated_chunk)
+                    
+                    translated_text = '\n'.join(translated_chunks)
+                    
+                    # Generate translated audio
+                    try:
+                        translated_path = os.path.join(audio_dir, 'translated.mp3')
+                        tts_en = gTTS(text=translated_text, lang='en')
+                        tts_en.save(translated_path)
+                        print(f"Translated audio saved to: {translated_path}")
+                    except Exception as e:
+                        print(f"Error generating translated audio: {str(e)}")
+                        
+                except Exception as e:
+                    print(f"Translation error: {str(e)}")
+                    return JsonResponse({'error': f'Translation failed: {str(e)}'}, status=500)
+            else:
+                # If original is English, use it as translated text
+                translated_text = transcript
+            
+            context = {
+                'original_text': transcript,
+                'translated_text': translated_text,
+                'is_translated': detected_lang != 'en',
+                'detected_language': detected_lang,
+                'success': True
+            }
+            
+            return JsonResponse(context)
+            
+        except Exception as e:
+            print(f"Process error: {str(e)}")
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+@login_required
+@require_POST
+def translate_text(request):
+    try:
+        print("=== Translation Request Received ===")
+        data = json.loads(request.body)
+        text = data.get('text', '')
+        source = data.get('source', 'auto')
+        target = data.get('target', 'en')
+
+        if not text:
+            return JsonResponse({'error': 'No text provided'}, status=400)
+
+        # Split text into paragraphs
+        paragraphs = text.split('\n')
+        translated_paragraphs = []
+        
+        # Initialize translator
+        translator = GoogleTranslator(source=source, target=target)
+        
+        for paragraph in paragraphs:
+            if not paragraph.strip():
+                translated_paragraphs.append('')
+                continue
+                
+            try:
+                # Further split long paragraphs into sentences if needed
+                if len(paragraph) > 500:  # Google's limit is around 5000 chars
+                    sentences = paragraph.split('. ')
+                    translated_sentences = []
+                    
+                    for sentence in sentences:
+                        if not sentence.strip():
+                            continue
+                        try:
+                            translated = translator.translate(sentence.strip())
+                            translated_sentences.append(translated)
+                        except Exception as e:
+                            print(f"Error translating sentence: {str(e)}")
+                            translated_sentences.append(sentence)  # Keep original on error
+                            
+                    translated_paragraph = '. '.join(translated_sentences)
+                else:
+                    translated_paragraph = translator.translate(paragraph.strip())
+                    
+                translated_paragraphs.append(translated_paragraph)
+                
+            except Exception as e:
+                print(f"Error translating paragraph: {str(e)}")
+                translated_paragraphs.append(paragraph)  # Keep original on error
+                
+        # Join all translated paragraphs
+        translated_text = '\n'.join(translated_paragraphs)
+        
+        if not translated_text:
+            raise Exception("Translation resulted in empty text")
+            
+        return JsonResponse({
+            'translatedText': translated_text,
+            'source': source,
+            'target': target
+        })
+            
+    except json.JSONDecodeError as e:
+        print(f"JSON Decode error: {str(e)}")
+        return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        print(f"Translation error: {str(e)}")
+        return JsonResponse({
+            'error': f"Translation failed: {str(e)}",
+            'details': {
+                'source': source,
+                'target': target,
+                'textLength': len(text) if 'text' in locals() else 0
+            }
+        }, status=500)

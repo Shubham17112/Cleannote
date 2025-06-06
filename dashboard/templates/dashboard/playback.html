@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Audio Playback - CleanNote{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto py-8 px-4">
+    <div class="bg-white shadow rounded-lg p-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">Audio Playback</h1>
+        
+        <!-- Audio Player Section -->
+        <div class="space-y-6">
+            <!-- Original Audio -->
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <h2 class="text-lg font-medium text-gray-900 mb-3">Original Audio ({{ detected_language|default:"English" }})</h2>
+                <div class="space-y-4">
+                    {% if original_text %}
+                    <div class="prose prose-sm max-w-none bg-white p-4 rounded-md border border-gray-200">
+                        {{ original_text }}
+                    </div>
+                    {% endif %}
+                    <div class="flex items-center space-x-4">
+                        <audio id="originalPlayer" class="flex-1" controls>
+                            <source src="{% get_media_prefix %}audio/original.mp3" type="audio/mpeg">
+                            Your browser does not support the audio element.
+                        </audio>
+                        <div class="flex space-x-2">
+                            <button onclick="toggleMute('originalPlayer')" class="mute-button inline-flex items-center p-2 border border-gray-300 rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                <!-- Speaker Icon (Unmuted) -->
+                                <svg class="unmuted-icon h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                                </svg>
+                                <!-- Muted Icon (Hidden by default) -->
+                                <svg class="muted-icon h-5 w-5 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zm10.707-9.293l-4 4m0 0l4 4m-4-4h.01" />
+                                </svg>
+                            </button>
+                            <button onclick="playAudio('originalPlayer')" class="play-button inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+                                </svg>
+                                Play Original
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Translated Audio (if available) -->
+            {% if is_translated %}
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <h2 class="text-lg font-medium text-gray-900 mb-3">English Translation</h2>
+                <div class="space-y-4">
+                    {% if translated_text %}
+                    <div class="prose prose-sm max-w-none bg-white p-4 rounded-md border border-gray-200">
+                        {{ translated_text }}
+                    </div>
+                    {% endif %}
+                    <div class="flex items-center space-x-4">
+                        <audio id="translatedPlayer" class="flex-1" controls>
+                            <source src="{% get_media_prefix %}audio/translated.mp3" type="audio/mpeg">
+                            Your browser does not support the audio element.
+                        </audio>
+                        <div class="flex space-x-2">
+                            <button onclick="toggleMute('translatedPlayer')" class="mute-button inline-flex items-center p-2 border border-gray-300 rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                <!-- Speaker Icon (Unmuted) -->
+                                <svg class="unmuted-icon h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                                </svg>
+                                <!-- Muted Icon (Hidden by default) -->
+                                <svg class="muted-icon h-5 w-5 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zm10.707-9.293l-4 4m0 0l4 4m-4-4h.01" />
+                                </svg>
+                            </button>
+                            <button onclick="playAudio('translatedPlayer')" class="play-button inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+                                </svg>
+                                Play Translation
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Upload Form -->
+        {% if not original_text %}
+        <div class="mt-8">
+            <form method="POST" class="space-y-4">
+                {% csrf_token %}
+                <div>
+                    <label for="transcript" class="block text-sm font-medium text-gray-700">Paste Transcript</label>
+                    <div class="mt-1">
+                        <textarea id="transcript" name="transcript" rows="4" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" placeholder="Paste your transcript here..."></textarea>
+                    </div>
+                </div>
+                <div>
+                    <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Process Transcript
+                    </button>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function playAudio(playerId) {
+    // Stop all other audio players
+    document.querySelectorAll('audio').forEach(audio => {
+        if (audio.id !== playerId) {
+            audio.pause();
+            audio.currentTime = 0;
+        }
+    });
+    
+    // Play the selected audio
+    const player = document.getElementById(playerId);
+    if (player.paused) {
+        player.play();
+    } else {
+        player.pause();
+    }
+}
+
+function toggleMute(playerId) {
+    const player = document.getElementById(playerId);
+    const muteButton = player.parentElement.querySelector('.mute-button');
+    const mutedIcon = muteButton.querySelector('.muted-icon');
+    const unmutedIcon = muteButton.querySelector('.unmuted-icon');
+    
+    player.muted = !player.muted;
+    
+    // Toggle icon visibility
+    if (player.muted) {
+        mutedIcon.classList.remove('hidden');
+        unmutedIcon.classList.add('hidden');
+        muteButton.setAttribute('title', 'Unmute');
+    } else {
+        mutedIcon.classList.add('hidden');
+        unmutedIcon.classList.remove('hidden');
+        muteButton.setAttribute('title', 'Mute');
+    }
+    
+    // Add a subtle animation
+    muteButton.classList.add('transform', 'scale-95');
+    setTimeout(() => {
+        muteButton.classList.remove('transform', 'scale-95');
+    }, 100);
+}
+
+// Add event listeners to update button text
+document.querySelectorAll('audio').forEach(audio => {
+    audio.addEventListener('play', function() {
+        const button = this.parentElement.querySelector('.play-button');
+        button.innerHTML = button.innerHTML.replace('Play', 'Pause');
+    });
+    
+    audio.addEventListener('pause', function() {
+        const button = this.parentElement.querySelector('.play-button');
+        button.innerHTML = button.innerHTML.replace('Pause', 'Play');
+    });
+    
+    // Initialize mute state
+    audio.addEventListener('loadedmetadata', function() {
+        const muteButton = this.parentElement.querySelector('.mute-button');
+        const mutedIcon = muteButton.querySelector('.muted-icon');
+        const unmutedIcon = muteButton.querySelector('.unmuted-icon');
+        
+        if (this.muted) {
+            mutedIcon.classList.remove('hidden');
+            unmutedIcon.classList.add('hidden');
+        } else {
+            mutedIcon.classList.add('hidden');
+            unmutedIcon.classList.remove('hidden');
+        }
+    });
+});
+</script>
+
+<style>
+.mute-button {
+    transition: transform 0.1s ease-in-out;
+}
+
+.mute-button:active {
+    transform: scale(0.95);
+}
+
+.mute-button svg {
+    transition: opacity 0.2s ease-in-out;
+}
+</style>
+{% endblock %} 
