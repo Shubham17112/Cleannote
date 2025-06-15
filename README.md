@@ -1,34 +1,45 @@
+Demo Video 
+
+
+
+https://github.com/user-attachments/assets/af3344d5-5e1d-4be0-af83-24f01be11261
+
+
 # 🧹 CleanNote
 
-CleanNote is an intelligent note-cleaning web app that transforms messy, unstructured notes into clean, readable, and organized summaries. It's especially useful for students, professionals, and researchers dealing with rough lecture transcripts, meeting notes, or raw text dumps.
+**CleanNote** is an AI-powered tool that automatically generates clean, structured notes from YouTube video dubbing content. It combines the power of **Google ATS**, **Whisper**, and **Notion API** to create summarized, exportable notes — perfect for learners, content creators, and researchers.
 
-Inspired by tools like NoteGPT, CleanNote leverages the power of AI to clean up language, remove unnecessary content, and generate smart summaries.
+## 🎯 What It Does
 
-## 🌟 Features
+- 🎥 Takes YouTube video links or audio dubbing files
+- 🧠 Generates transcripts using **Google ATS**
+- 🎙️ Uses **OpenAI Whisper** for accurate audio transcription (fallback or improvement)
+- ✍️ Cleans, summarizes, and segments content
+- 📤 Exports final notes directly to **Notion**
+- 🧼 Removes filler words, improves grammar, and extracts key points
 
-- ✅ Paste or upload raw notes (text/transcript)
-- 🧠 AI-powered text cleaning (grammar fixes, structure improvement)
-- ✨ Summarization of key points
-- 🧩 Topic segmentation and reformatting
-- 📤 Export cleaned notes as TXT or PDF
-- 🌙 Light/Dark mode (if applicable)
-- 🔒 Local processing or OpenAI API support
+---
 
 ## 🛠 Tech Stack
 
-- **Frontend**: React / Next.js
-- **Backend**: Node.js / Flask / Django (whichever you’re using)
-- **AI Layer**: OpenAI GPT-4 API / LLM-based models
-- **Styling**: Tailwind CSS / CSS Modules
-- **Other**: Axios, Markdown parser, PDF generator (e.g. jsPDF)
+| Layer       | Tool/Service              |
+|-------------|---------------------------|
+| **Transcription** | Google ATS, OpenAI Whisper     |
+| **Summarization** | OpenAI GPT (or custom LLM)     |
+| **Frontend** | Next.js + Tailwind CSS          |
+| **Backend**  | Node.js / Flask (specify yours) |
+| **Export**   | Notion API                      |
+
+---
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
-- Node.js and npm (for React/Next.js)
-- Python (if using Flask/Django backend)
-- OpenAI API key (for AI functionality)
+- Node.js or Python (depending on your backend)
+- OpenAI API Key (for Whisper or GPT)
+- Google Cloud credentials (for ATS)
+- Notion integration token and database ID
 
 ### Installation
 
@@ -38,11 +49,8 @@ git clone https://github.com/yourusername/cleannote.git
 cd cleannote
 
 # Install dependencies
-npm install
+npm install  # or pip install -r requirements.txt if Python backend
 
-# Add your OpenAI API key
+# Set up environment variables
 touch .env
-echo "OPENAI_API_KEY=your_key_here" >> .env
-
-# Run the development server
-npm run dev
+# Add your API keys and tokens here
