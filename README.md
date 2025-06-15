@@ -25,9 +25,9 @@ https://github.com/user-attachments/assets/af3344d5-5e1d-4be0-af83-24f01be11261
 | Layer       | Tool/Service              |
 |-------------|---------------------------|
 | **Transcription** | Google ATS, OpenAI Whisper     |
-| **Summarization** | OpenAI GPT (or custom LLM)     |
-| **Frontend** | Next.js + Tailwind CSS          |
-| **Backend**  | Node.js / Flask (specify yours) |
+| **Summarization** | OpenAI GPT    |
+| **Frontend** | HMTl Jinga          |
+| **Backend**  | Djanog |
 | **Export**   | Notion API                      |
 
 ---
