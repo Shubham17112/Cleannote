@@ -1,11 +1,11 @@
 Demo Video 
-Currently in progress 
+
 
 
 https://github.com/user-attachments/assets/af3344d5-5e1d-4be0-af83-24f01be11261
 
 
-# 🧹 CleanNote
+# 🧹 CleanNote #Note Currently in progress 
 
 **CleanNote** is an AI-powered tool that automatically generates clean, structured notes from YouTube video dubbing content. It combines the power of **Google ATS**, **Whisper**, and **Notion API** to create summarized, exportable notes — perfect for learners, content creators, and researchers.
 
